@@ -1,62 +1,80 @@
-import { useState } from "react";
-import { formatRgb, rgbToHex, strToRGB } from "./lib";
+import { useEffect, useMemo, useState } from "react";
+import { Action, Title } from "./components";
+import { useColorFromParams, useYColor } from "./hooks";
+import { formatRgb, rgbToHex } from "./lib";
 import "./App.css";
 
-const Title = ({ hidden }: { hidden: boolean }) => {
-  if (hidden) return null;
+const Preview = ({
+  setPreview,
+}: {
+  setPreview: React.Dispatch<React.SetStateAction<boolean>>;
+}) => {
+  const { name, rgb } = useColorFromParams();
+  useYColor(rgb);
+
+  const color = useMemo(
+    () => ({
+      hex: `#${rgbToHex(rgb)}`,
+      rgb: formatRgb(rgb),
+    }),
+    [rgb],
+  );
+
+  const onBack = () => {
+    const url = new URL(location.href);
+    url.searchParams.delete("n");
+    history.pushState({}, "", url);
+    setPreview(false);
+  };
 
   return (
-    <h1 className="text" style={{ fontWeight: 400 }}>
-      The <u>color</u>
-      <br />
-      <i>of</i> your <b>name</b>
-    </h1>
+    <>
+      <div className="rect" style={{ ["--rect" as string]: formatRgb(rgb) }}>
+        <p className="text">
+          <code>{color.hex}</code>
+        </p>
+        <p className="text">
+          <code>{color.rgb}</code>
+        </p>
+      </div>
+      <div className="desc">
+        <p>{name}</p>
+      </div>
+      <footer>
+        <button onClick={() => onBack()}>{`< Back`}</button>
+      </footer>
+    </>
   );
 };
 
-const MyColor = ({ name }: { name: string }) => (
-  <div
-    className="my-color"
-    style={{ ["--ycolor" as string]: formatRgb(strToRGB(name)) }}
-  >
-    <div className="desc">
-      <p className="text">{name}</p>
-      <p className="text">
-        <code>#{rgbToHex(strToRGB(name))}</code>
-      </p>
-      <p className="text">
-        <code>{formatRgb(strToRGB(name))}</code>
-      </p>
-    </div>
-  </div>
+const Home = ({
+  setPreview,
+}: {
+  setPreview: React.Dispatch<React.SetStateAction<boolean>>;
+}) => (
+  <>
+    <Title />
+    <Action setPreview={setPreview} />
+  </>
 );
 
 function App() {
-  const [name, setName] = useState("");
   const [preview, setPreview] = useState(false);
 
+  useEffect(() => {
+    const url = new URL(location.href);
+    const name = url.searchParams.get("n");
+    if (name) setPreview(true);
+  }, []);
+
   return (
-    <div className="container">
-      <header className="text">
-        <span>
-          t<u>c</u>
-          <b>n</b>
-        </span>
-      </header>
-      <Title hidden={preview} />
-      {!preview && (
-        <div className="action">
-          <input
-            type="text"
-            placeholder="zal"
-            value={name}
-            onChange={({ target: { value } }) => setName(value)}
-          />
-          <button onClick={() => setPreview((prev) => !prev)}>W</button>
-        </div>
+    <main>
+      {!preview ? (
+        <Home setPreview={setPreview} />
+      ) : (
+        <Preview setPreview={setPreview} />
       )}
-      <MyColor name={name} />
-    </div>
+    </main>
   );
 }
 
